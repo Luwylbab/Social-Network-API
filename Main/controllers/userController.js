@@ -10,7 +10,6 @@ module.exports = {
 
       const userObj = {
         users,
-        headCount: await headCount(),
       };
 
       res.json(userObj);
@@ -31,7 +30,6 @@ module.exports = {
 
       res.json({
         user,
-        grade: await grade(req.params.userId),
       });
     } catch (err) {
       console.log(err);
@@ -56,21 +54,31 @@ module.exports = {
         return res.status(404).json({ message: 'No such user exists' });
       }
 
-      const thought = await Thought.findOneAndUpdate(
-        { users: req.params.userId },
-        { $pull: { users: req.params.userId } },
-        { new: true }
-      );
+      
+      await Thought.deleteMany({ _id: { $in: user.thoughts } });
 
-      if (!thought) {
-        return res.status(404).json({
-          message: 'User deleted, but no thoughts found',
-        });
-      }
-
-      res.json({ message: 'User successfully deleted' });
+      res.json({ message: 'User and thoughts successfully deleted' });
     } catch (err) {
       console.log(err);
+      res.status(500).json(err);
+    }
+  },
+
+  async updateUser(req, res) {
+    try {
+      const user = await User.findOneAndUpdate(
+        { _id: req.params.userId },
+        { $set: req.body },
+        { runValidators: true, new: true }
+      );
+
+      if (!user) {
+        res.status(404).json({ message: 'No user with this id!' });
+        return;
+      }
+
+      res.json(user);
+    } catch (err) {
       res.status(500).json(err);
     }
   },

@@ -4,7 +4,7 @@ module.exports = {
   // Get all thoughts
   async getThoughts(req, res) {
     try {
-      const thoughts = await Thought.find().populate('users');
+      const thoughts = await Thought.find();
       res.json(thoughts);
     } catch (err) {
       res.status(500).json(err);
@@ -13,8 +13,7 @@ module.exports = {
   // Get a thought
   async getSingleThought(req, res) {
     try {
-      const thought = await Thought.findOne({ _id: req.params.thoughtId })
-        .populate('users');
+      const thought = await Thought.findOne({ _id: req.params.thoughtId });
 
       if (!thought) {
         return res.status(404).json({ message: 'No thought with that ID' });
@@ -44,8 +43,19 @@ module.exports = {
         res.status(404).json({ message: 'No thought with that ID' });
       }
 
-      await User.deleteMany({ _id: { $in: thought.users } });
-      res.json({ message: 'Thought and users deleted!' });
+      const user = await User.findOneAndUpdate(
+        { username: thought.username },
+        { $pull: { thoughts: req.params.thoughtId } },
+        { new: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({
+          message: 'Thought deleted, but no user found',
+        });
+      }
+      // await User.deleteMany({ _id: { $in: thought.users } });
+      res.json({ message: 'Thought deleted!' });
     } catch (err) {
       res.status(500).json(err);
     }
@@ -61,6 +71,7 @@ module.exports = {
 
       if (!thought) {
         res.status(404).json({ message: 'No thought with this id!' });
+        return;
       }
 
       res.json(thought);
